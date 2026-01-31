@@ -10,6 +10,9 @@ ALLOW_ANON="${MQTT_ALLOW_ANONYMOUS:-false}"
 # Build final config every start
 cp "$BASE_CONF" "$FINAL_CONF"
 
+# Ensure directories are writable
+chown -R mosquitto:mosquitto /mosquitto/data /mosquitto/log
+
 if [ "$ALLOW_ANON" = "true" ]; then
   {
     echo ""
@@ -31,6 +34,7 @@ else
     mosquitto_passwd -b "$PASSWD_FILE" "$MQTT_USER" "$MQTT_PASSWORD"
   fi
 
+  chown mosquitto:mosquitto "$PASSWD_FILE"
   chmod 0700 "$PASSWD_FILE" 2>/dev/null || true
 
   {
@@ -43,4 +47,5 @@ else
   echo "Password mode enabled for user: $MQTT_USER"
 fi
 
+chown mosquitto:mosquitto "$FINAL_CONF"
 exec mosquitto -c "$FINAL_CONF"
