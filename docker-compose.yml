@@ -1,15 +1,18 @@
 services:
-  mosquitto:
+  mqtt:
     build: .
     ports:
       - "1883:1883"
       - "9001:9001"
     environment:
-      MQTT_USER: "${MQTT_USER}"
-      MQTT_PASSWORD: "${MQTT_PASSWORD}"
-      # MQTT_ALLOW_ANONYMOUS: "true"
+      MQTT_ALLOW_ANONYMOUS: "${MQTT_ALLOW_ANONYMOUS:-false}"
+      MQTT_USER: "${MQTT_USER:-}"
+      MQTT_PASSWORD: "${MQTT_PASSWORD:-}"
     volumes:
-      - ./data:/mosquitto/data
-      - ./log:/mosquitto/log
+      - mqtt-data:/mosquitto/data
+      - mqtt-log:/mosquitto/log
     restart: unless-stopped
-    
+
+volumes:
+  mqtt-data:
+  mqtt-log:

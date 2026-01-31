@@ -1,19 +1,30 @@
 #!/bin/sh
 set -eu
 
+BASE_CONF="/mosquitto/config/mosquitto.base.conf"
+FINAL_CONF="/mosquitto/config/mosquitto.conf"
 PASSWD_FILE="/mosquitto/config/passwd"
-CONF_FILE="/mosquitto/config/mosquitto.conf"
 
 ALLOW_ANON="${MQTT_ALLOW_ANONYMOUS:-false}"
 
-if [ "$ALLOW_ANON" != "true" ]; then
+# Build final config every start
+cp "$BASE_CONF" "$FINAL_CONF"
+
+if [ "$ALLOW_ANON" = "true" ]; then
+  {
+    echo ""
+    echo "# Auth mode: anonymous"
+    echo "allow_anonymous true"
+  } >> "$FINAL_CONF"
+
+  echo "Anonymous mode enabled."
+else
   if [ -z "${MQTT_USER:-}" ] || [ -z "${MQTT_PASSWORD:-}" ]; then
-    echo "Error: MQTT_USER and MQTT_PASSWORD must be set (or MQTT_ALLOW_ANONYMOUS=true)."
+    echo "Error: MQTT_USER and MQTT_PASSWORD must be set when MQTT_ALLOW_ANONYMOUS is not true."
     exit 1
   fi
 
   # Create/update password file
-  # Use -c only when creating a new file
   if [ ! -f "$PASSWD_FILE" ]; then
     mosquitto_passwd -b -c "$PASSWD_FILE" "$MQTT_USER" "$MQTT_PASSWORD"
   else
@@ -21,8 +32,15 @@ if [ "$ALLOW_ANON" != "true" ]; then
   fi
 
   chmod 0700 "$PASSWD_FILE" 2>/dev/null || true
-else
-  echo "MQTT_ALLOW_ANONYMOUS=true: authentication disabled."
+
+  {
+    echo ""
+    echo "# Auth mode: password"
+    echo "allow_anonymous false"
+    echo "password_file $PASSWD_FILE"
+  } >> "$FINAL_CONF"
+
+  echo "Password mode enabled for user: $MQTT_USER"
 fi
 
-exec mosquitto -c "$CONF_FILE"
+exec mosquitto -c "$FINAL_CONF"
